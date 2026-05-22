@@ -1,0 +1,1639 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gym Manager — برنامج إدارة الصالات الرياضية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --orange: #f5821f;
+    --orange-dark: #d4640a;
+    --orange-glow: rgba(245,130,31,0.3);
+    --bg: #080810;
+    --bg2: #0e0e1a;
+    --bg3: #13131f;
+    --card: #141420;
+    --border: rgba(245,130,31,0.15);
+    --text: #f0f0f8;
+    --muted: #7070a0;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --red: #ef4444;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Cairo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* ─── NOISE TEXTURE OVERLAY ─── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  /* ─── SCROLLBAR ─── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--orange); border-radius: 2px; }
+
+  /* ─── NAV ─── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 18px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(8,8,16,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+  }
+
+  .nav-logo-icon {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    color: white;
+    box-shadow: 0 0 20px var(--orange-glow);
+  }
+
+  .nav-logo-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--text);
+  }
+
+  .nav-logo-text span { color: var(--orange); }
+
+  .nav-cta {
+    background: var(--orange);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .nav-cta:hover {
+    background: var(--orange-dark);
+    box-shadow: 0 0 25px var(--orange-glow);
+    transform: translateY(-1px);
+  }
+
+  /* ─── HERO ─── */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 120px 40px 80px;
+    overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(245,130,31,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 80% 50%, rgba(245,130,31,0.06) 0%, transparent 50%),
+      var(--bg);
+  }
+
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(245,130,31,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245,130,31,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 0%, transparent 80%);
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    max-width: 800px;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(245,130,31,0.1);
+    border: 1px solid var(--border);
+    color: var(--orange);
+    padding: 6px 18px;
+    border-radius: 100px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-bottom: 28px;
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .hero-badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--orange);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.3); }
+  }
+
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(52px, 10vw, 100px);
+    line-height: 1;
+    letter-spacing: 4px;
+    margin-bottom: 10px;
+    animation: fadeDown 0.6s 0.1s ease both;
+  }
+
+  .hero-title span {
+    color: var(--orange);
+    text-shadow: 0 0 40px var(--orange-glow);
+  }
+
+  .hero-subtitle {
+    font-size: clamp(1rem, 2.5vw, 1.3rem);
+    color: var(--muted);
+    margin-bottom: 40px;
+    font-weight: 400;
+    animation: fadeDown 0.6s 0.2s ease both;
+  }
+
+  .hero-subtitle strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .hero-btns {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    animation: fadeDown 0.6s 0.3s ease both;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+    color: white;
+    border: none;
+    padding: 16px 36px;
+    border-radius: 12px;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 30px rgba(245,130,31,0.3);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 40px rgba(245,130,31,0.4);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 16px 36px;
+    border-radius: 12px;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--orange);
+    color: var(--orange);
+    background: rgba(245,130,31,0.05);
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    margin-top: 60px;
+    flex-wrap: wrap;
+    animation: fadeDown 0.6s 0.4s ease both;
+  }
+
+  .hero-stat {
+    text-align: center;
+  }
+
+  .hero-stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.4rem;
+    color: var(--orange);
+    line-height: 1;
+  }
+
+  .hero-stat-label {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── MOCK SCREEN ─── */
+  .screen-section {
+    padding: 80px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .mock-container {
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .mock-window {
+    background: var(--card);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    box-shadow:
+      0 40px 100px rgba(0,0,0,0.6),
+      0 0 0 1px rgba(245,130,31,0.1),
+      inset 0 1px 0 rgba(255,255,255,0.05);
+    animation: floatUp 6s ease-in-out infinite;
+  }
+
+  @keyframes floatUp {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .mock-titlebar {
+    background: #0c0c18;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mock-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+  }
+
+  .mock-dot.red { background: #ff5f57; }
+  .mock-dot.yellow { background: #febc2e; }
+  .mock-dot.green { background: #28c840; }
+
+  .mock-title {
+    margin-right: auto;
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+
+  .mock-body {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    min-height: 420px;
+  }
+
+  .mock-sidebar {
+    background: #0a0a16;
+    padding: 20px 0;
+    border-left: 1px solid var(--border);
+  }
+
+  .mock-sidebar-logo {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .mock-sidebar-logo-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    color: white;
+  }
+
+  .mock-sidebar-logo-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 14px;
+    letter-spacing: 2px;
+    color: var(--orange);
+  }
+
+  .mock-nav-item {
+    padding: 10px 20px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-right: 3px solid transparent;
+  }
+
+  .mock-nav-item.active {
+    color: var(--orange);
+    background: rgba(245,130,31,0.08);
+    border-right-color: var(--orange);
+  }
+
+  .mock-main {
+    padding: 20px;
+  }
+
+  .mock-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .mock-page-title {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .mock-add-btn {
+    background: var(--orange);
+    color: white;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 7px;
+    font-size: 0.72rem;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .mock-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .mock-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+
+  .mock-card-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    line-height: 1;
+  }
+
+  .mock-card-num.green { color: var(--green); }
+  .mock-card-num.yellow { color: var(--yellow); }
+  .mock-card-num.red { color: var(--red); }
+
+  .mock-card-label {
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .mock-table-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 0.74rem;
+  }
+
+  .mock-avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    color: white;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .mock-name { flex: 1; font-weight: 600; }
+  .mock-phone { color: var(--muted); flex: 1; }
+
+  .mock-status {
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 0.65rem;
+    font-weight: 700;
+  }
+
+  .mock-status.active { background: rgba(34,197,94,0.15); color: var(--green); }
+  .mock-status.warning { background: rgba(234,179,8,0.15); color: var(--yellow); }
+  .mock-status.expired { background: rgba(239,68,68,0.15); color: var(--red); }
+
+  .mock-wa-btn {
+    background: rgba(34,197,94,0.15);
+    color: var(--green);
+    border: none;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    cursor: pointer;
+  }
+
+  /* ─── GLOW DECORATION ─── */
+  .glow-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+  }
+
+  /* ─── SECTION TITLE ─── */
+  .section-header {
+    text-align: center;
+    margin-bottom: 60px;
+  }
+
+  .section-tag {
+    display: inline-block;
+    background: rgba(245,130,31,0.1);
+    color: var(--orange);
+    border: 1px solid var(--border);
+    padding: 5px 16px;
+    border-radius: 100px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    letter-spacing: 1px;
+  }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(32px, 5vw, 56px);
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+  }
+
+  .section-title span { color: var(--orange); }
+
+  .section-desc {
+    color: var(--muted);
+    font-size: 1rem;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  /* ─── FEATURES ─── */
+  .features-section {
+    padding: 100px 40px;
+    background: var(--bg2);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .features-grid {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+  }
+
+  .feature-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 100px; height: 100px;
+    background: radial-gradient(circle, var(--orange-glow) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .feature-card:hover {
+    border-color: rgba(245,130,31,0.4);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  }
+
+  .feature-card:hover::before { opacity: 1; }
+
+  .feature-icon {
+    width: 54px; height: 54px;
+    background: rgba(245,130,31,0.1);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    margin-bottom: 20px;
+  }
+
+  .feature-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  .feature-desc {
+    color: var(--muted);
+    font-size: 0.88rem;
+    line-height: 1.7;
+  }
+
+  /* ─── HOW IT WORKS ─── */
+  .how-section {
+    padding: 100px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .steps-container {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .step {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 24px;
+    padding: 32px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    position: relative;
+  }
+
+  .step:last-child { border-bottom: none; }
+
+  .step-num-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .step-num {
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    color: white;
+    flex-shrink: 0;
+    box-shadow: 0 0 20px var(--orange-glow);
+  }
+
+  .step-line {
+    width: 2px;
+    flex: 1;
+    background: linear-gradient(to bottom, var(--orange), transparent);
+    margin-top: 8px;
+    min-height: 40px;
+  }
+
+  .step-content { padding-top: 8px; }
+
+  .step-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .step-desc {
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.7;
+  }
+
+  /* ─── SCREENS SHOWCASE ─── */
+  .showcase-section {
+    padding: 100px 40px;
+    background: var(--bg2);
+    overflow: hidden;
+  }
+
+  .showcase-tabs {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 40px;
+  }
+
+  .showcase-tab {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 8px 20px;
+    border-radius: 100px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .showcase-tab.active,
+  .showcase-tab:hover {
+    background: rgba(245,130,31,0.1);
+    border-color: var(--orange);
+    color: var(--orange);
+  }
+
+  .showcase-screens {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .showcase-screen {
+    display: none;
+  }
+
+  .showcase-screen.active {
+    display: block;
+    animation: fadeIn 0.4s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Mini screens for showcase */
+  .mini-screen {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+  }
+
+  .mini-titlebar {
+    background: #0c0c18;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mini-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .mini-dot.r { background: #ff5f57; }
+  .mini-dot.y { background: #febc2e; }
+  .mini-dot.g { background: #28c840; }
+
+  .mini-content { padding: 20px; }
+
+  /* ─── PRICING ─── */
+  .pricing-section {
+    padding: 100px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pricing-card {
+    max-width: 500px;
+    margin: 0 auto;
+    background: var(--card);
+    border: 2px solid var(--orange);
+    border-radius: 24px;
+    padding: 48px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+      0 0 60px rgba(245,130,31,0.15),
+      0 30px 60px rgba(0,0,0,0.4);
+  }
+
+  .pricing-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at center, rgba(245,130,31,0.05) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .pricing-badge {
+    position: absolute;
+    top: -1px;
+    right: 40px;
+    background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+    color: white;
+    padding: 6px 20px;
+    border-radius: 0 0 12px 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .pricing-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 3px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .pricing-price {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 5rem;
+    line-height: 1;
+    color: var(--orange);
+    text-shadow: 0 0 40px var(--orange-glow);
+    margin-bottom: 4px;
+  }
+
+  .pricing-currency {
+    font-size: 1.6rem;
+    color: var(--orange);
+  }
+
+  .pricing-period {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-bottom: 36px;
+  }
+
+  .pricing-features {
+    list-style: none;
+    text-align: right;
+    margin-bottom: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .pricing-features li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.9rem;
+  }
+
+  .pricing-features li::before {
+    content: '✓';
+    width: 22px; height: 22px;
+    background: rgba(34,197,94,0.15);
+    color: var(--green);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .pricing-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+    color: white;
+    border: none;
+    padding: 18px;
+    border-radius: 12px;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: block;
+    box-shadow: 0 8px 30px rgba(245,130,31,0.3);
+  }
+
+  .pricing-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 40px rgba(245,130,31,0.4);
+  }
+
+  /* ─── CONTACT / CTA ─── */
+  .cta-section {
+    padding: 100px 40px;
+    background: var(--bg2);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px; height: 300px;
+    background: radial-gradient(ellipse, rgba(245,130,31,0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .cta-content {
+    position: relative;
+    z-index: 2;
+  }
+
+  .wa-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    background: #25d366;
+    color: white;
+    border: none;
+    padding: 20px 48px;
+    border-radius: 16px;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    margin-top: 32px;
+    box-shadow: 0 10px 40px rgba(37,211,102,0.3);
+  }
+
+  .wa-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 20px 50px rgba(37,211,102,0.4);
+  }
+
+  .wa-btn svg {
+    width: 28px; height: 28px;
+    fill: white;
+  }
+
+  .contact-info {
+    margin-top: 24px;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .contact-info a {
+    color: var(--orange);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    padding: 32px 40px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .footer-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+    color: var(--text);
+  }
+
+  .footer-logo span { color: var(--orange); }
+
+  .footer-copy {
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  /* ─── FLOATING WA BTN ─── */
+  .floating-wa {
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
+    width: 60px; height: 60px;
+    background: #25d366;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 30px rgba(37,211,102,0.4);
+    z-index: 200;
+    transition: all 0.3s;
+    animation: bounceIn 1s 1s ease both;
+  }
+
+  .floating-wa:hover {
+    transform: scale(1.1);
+    box-shadow: 0 12px 40px rgba(37,211,102,0.5);
+  }
+
+  .floating-wa svg {
+    width: 32px; height: 32px;
+    fill: white;
+  }
+
+  @keyframes bounceIn {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 768px) {
+    nav { padding: 14px 20px; }
+    .hero { padding: 100px 20px 60px; }
+    .mock-body { grid-template-columns: 1fr; }
+    .mock-sidebar { display: none; }
+    .features-section, .how-section, .showcase-section,
+    .pricing-section, .cta-section { padding: 60px 20px; }
+    .pricing-card { padding: 32px 24px; }
+    footer { padding: 24px 20px; }
+  }
+
+  /* ─── SCROLL REVEAL ─── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="#">
+    <div class="nav-logo-icon">G</div>
+    <div class="nav-logo-text">GYM <span>MANAGER</span></div>
+  </a>
+  <a class="nav-cta" href="https://wa.me/213696593033?text=السلام عليكم، أريد الاستفسار عن برنامج Gym Manager" target="_blank">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    اطلب البرنامج
+  </a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+
+  <div class="glow-orb" style="width:500px;height:300px;top:-100px;left:50%;transform:translateX(-50%);background:rgba(245,130,31,0.08);"></div>
+
+  <div class="hero-content">
+    <div class="hero-badge">🇩🇿 مصنوع خصيصاً للجزائر</div>
+
+    <h1 class="hero-title">
+      GYM<br><span>MANAGER</span>
+    </h1>
+
+    <p class="hero-subtitle">
+      وداعاً للورقة والستيلو — <strong>سيّر صالتك باحترافية</strong><br>
+      بلا إنترنت، بلا اشتراك شهري، بلا تعقيد
+    </p>
+
+    <div class="hero-btns">
+      <a href="https://wa.me/213696593033?text=السلام عليكم، أريد الاستفسار عن برنامج Gym Manager" target="_blank" class="btn-primary">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        اطلب الآن — 4,500 دج
+      </a>
+      <a href="#features" class="btn-secondary">
+        🔍 اكتشف المميزات
+      </a>
+    </div>
+
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-num">100%</div>
+        <div class="hero-stat-label">بدون إنترنت</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">∞</div>
+        <div class="hero-stat-label">مشتركين بلا حد</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">1X</div>
+        <div class="hero-stat-label">دفع مرة واحدة فقط</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">DZ</div>
+        <div class="hero-stat-label">مصنوع للجزائر</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MOCK SCREEN -->
+<section class="screen-section">
+  <div class="glow-orb" style="width:400px;height:400px;top:50%;right:-100px;transform:translateY(-50%);background:rgba(245,130,31,0.06);"></div>
+
+  <div class="mock-container reveal">
+    <div class="mock-window">
+      <div class="mock-titlebar">
+        <div class="mock-dot red"></div>
+        <div class="mock-dot yellow"></div>
+        <div class="mock-dot green"></div>
+        <span class="mock-title">GYM MANAGER v1.0</span>
+      </div>
+      <div class="mock-body">
+        <div class="mock-sidebar">
+          <div class="mock-sidebar-logo">
+            <div class="mock-sidebar-logo-icon">G</div>
+            <div class="mock-sidebar-logo-text">GYM MGR</div>
+          </div>
+          <div class="mock-nav-item active">🏠 &nbsp;لوحة التحكم</div>
+          <div class="mock-nav-item">👥 &nbsp;المشتركون</div>
+          <div class="mock-nav-item">🔔 &nbsp;التنبيهات</div>
+          <div class="mock-nav-item">💊 &nbsp;المكملات</div>
+          <div class="mock-nav-item">📊 &nbsp;الإحصائيات</div>
+          <div class="mock-nav-item">💳 &nbsp;الديون</div>
+          <div class="mock-nav-item">⚙️ &nbsp;الإعدادات</div>
+        </div>
+        <div class="mock-main">
+          <div class="mock-header">
+            <div class="mock-page-title">لوحة التحكم الرئيسية</div>
+            <button class="mock-add-btn">+ مشترك جديد</button>
+          </div>
+          <div class="mock-cards">
+            <div class="mock-card">
+              <div class="mock-card-num green">42</div>
+              <div class="mock-card-label">✅ اشتراك نشط</div>
+            </div>
+            <div class="mock-card">
+              <div class="mock-card-num yellow">7</div>
+              <div class="mock-card-label">⚠️ قارب الانتهاء</div>
+            </div>
+            <div class="mock-card">
+              <div class="mock-card-num red">3</div>
+              <div class="mock-card-label">❌ منتهي الصلاحية</div>
+            </div>
+          </div>
+          <div class="mock-table-row">
+            <div class="mock-avatar">أح</div>
+            <div class="mock-name">أحمد بن علي</div>
+            <div class="mock-phone">0696 123 456</div>
+            <div class="mock-status active">نشط</div>
+            <button class="mock-wa-btn">💬 واتساب</button>
+          </div>
+          <div class="mock-table-row">
+            <div class="mock-avatar">يو</div>
+            <div class="mock-name">يوسف قاسم</div>
+            <div class="mock-phone">0561 789 012</div>
+            <div class="mock-status warning">قريباً</div>
+            <button class="mock-wa-btn">💬 واتساب</button>
+          </div>
+          <div class="mock-table-row">
+            <div class="mock-avatar">كر</div>
+            <div class="mock-name">كريم مصطفى</div>
+            <div class="mock-phone">0770 345 678</div>
+            <div class="mock-status expired">منتهي</div>
+            <button class="mock-wa-btn">💬 واتساب</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+  <div class="glow-orb" style="width:500px;height:500px;top:0;right:-150px;background:rgba(245,130,31,0.04);"></div>
+
+  <div class="section-header reveal">
+    <div class="section-tag">⚡ المميزات</div>
+    <h2 class="section-title">كل اللي تحتاجه في <span>مكان وحد</span></h2>
+    <p class="section-desc">برنامج كامل لتسيير صالتك من الألف إلى الياء</p>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card reveal">
+      <div class="feature-icon">👥</div>
+      <div class="feature-title">إدارة المشتركين</div>
+      <div class="feature-desc">أضف مشتركين جدد في ثواني — اسم، رقم، تاريخ الاشتراك، السعر. وشوف وضعية كل مشترك دفعة واحدة بألوان واضحة.</div>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon">🔔</div>
+      <div class="feature-title">نظام التنبيهات</div>
+      <div class="feature-desc">البرنامج يخبرك تلقائياً شكون اشتراكو قارب ينتهي وشكون خلص. ما محتاجش تحسب أو تتذكر — هو يذكّرك.</div>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon">💬</div>
+      <div class="feature-title">إرسال واتساب</div>
+      <div class="feature-desc">بضغطة وحدة يفتحلك رسالة واتساب جاهزة للمشترك تذكره يجدد اشتراكه. البرنامج يكتب الرسالة وحده.</div>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon">💊</div>
+      <div class="feature-title">المكملات الغذائية</div>
+      <div class="feature-desc">سجّل مبيعات البروتين والمكملات في الصالة. تتبع المخزون والأرباح في آخر كل شهر بسهولة.</div>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon">📊</div>
+      <div class="feature-title">الإحصائيات الكاملة</div>
+      <div class="feature-desc">شوف كم دخل عندك هذا الشهر، كم مشترك نشط، كم ربحت من المكملات. كل أرقامك في مكان وحد.</div>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon">💳</div>
+      <div class="feature-title">تتبع الديون</div>
+      <div class="feature-desc">سجّل شكون تدين عليك — المبلغ والتاريخ. وتقدر تبعثله تذكير واتساب مباشرة. ما يفوتك والو.</div>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon">📶</div>
+      <div class="feature-title">يخدم بلا إنترنت</div>
+      <div class="feature-desc">البرنامج يشتغل عادي بدون إنترنت. بياناتك محفوظة على جهازك. ما تعتمدش على النت.</div>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon">💾</div>
+      <div class="feature-title">نسخة احتياطية</div>
+      <div class="feature-desc">بضغطة وحدة احفظ كل بياناتك في ملف. وإذا بدّلت الكمبيوتر — استرجع كل شيء في ثواني.</div>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon">⚙️</div>
+      <div class="feature-title">إعدادات مرنة</div>
+      <div class="feature-desc">خصّص اسم الصالة، رقم الهاتف، ورسالة واتساب كيما تحب. البرنامج يتأقلم مع صالتك.</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section">
+  <div class="section-header reveal">
+    <div class="section-tag">🚀 طريقة العمل</div>
+    <h2 class="section-title">كيفاش <span>يخدم البرنامج؟</span></h2>
+    <p class="section-desc">بسيط وسهل — ما تحتاجش خبرة تقنية</p>
+  </div>
+
+  <div class="steps-container">
+    <div class="step reveal">
+      <div class="step-num-col">
+        <div class="step-num">1</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-content">
+        <div class="step-title">ثبّت البرنامج على كمبيوترك</div>
+        <div class="step-desc">بعد ما تطلب البرنامج، تلقى ملف تثبيت. دبل كليك وخلاص — البرنامج مثبّت في دقيقة وحدة. يشتغل على Windows كامل.</div>
+      </div>
+    </div>
+    <div class="step reveal">
+      <div class="step-num-col">
+        <div class="step-num">2</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-content">
+        <div class="step-title">ضبط الإعدادات تاع الصالة</div>
+        <div class="step-desc">كتب اسم الصالة تاعك، رقم تيليفونك، وخصّص رسالة واتساب كيما تحب. يأخذ 2 دقايق بالمزيد.</div>
+      </div>
+    </div>
+    <div class="step reveal">
+      <div class="step-num-col">
+        <div class="step-num">3</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-content">
+        <div class="step-title">ابدأ تضيف المشتركين</div>
+        <div class="step-desc">اسم المشترك، رقمه، تاريخ الاشتراك، وسعره. البرنامج يحسب تاريخ الانتهاء وحده. ما محتاجش تحسب والو.</div>
+      </div>
+    </div>
+    <div class="step reveal">
+      <div class="step-num-col">
+        <div class="step-num">4</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-content">
+        <div class="step-title">البرنامج يتكفّل بالباقي</div>
+        <div class="step-desc">كل يوم تفتح البرنامج يظهرلك التنبيهات — شكون قارب اشتراكو ينتهي. بضغطة وحدة تبعثله واتساب. بسيطة!</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SHOWCASE -->
+<section class="showcase-section">
+  <div class="section-header reveal">
+    <div class="section-tag">🖥️ شوف البرنامج</div>
+    <h2 class="section-title">واجهة <span>بسيطة واحترافية</span></h2>
+  </div>
+
+  <div class="showcase-tabs reveal">
+    <button class="showcase-tab active" onclick="showScreen('dashboard')">🏠 لوحة التحكم</button>
+    <button class="showcase-tab" onclick="showScreen('members')">👥 المشتركون</button>
+    <button class="showcase-tab" onclick="showScreen('alerts')">🔔 التنبيهات</button>
+    <button class="showcase-tab" onclick="showScreen('stats')">📊 الإحصائيات</button>
+    <button class="showcase-tab" onclick="showScreen('debts')">💳 الديون</button>
+  </div>
+
+  <div class="showcase-screens reveal">
+
+    <!-- Dashboard -->
+    <div class="showcase-screen active" id="screen-dashboard">
+      <div class="mini-screen">
+        <div class="mini-titlebar">
+          <div class="mini-dot r"></div><div class="mini-dot y"></div><div class="mini-dot g"></div>
+          <span style="margin-right:auto;font-size:0.72rem;color:var(--muted);">لوحة التحكم الرئيسية</span>
+        </div>
+        <div class="mini-content">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
+            <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+              <div style="font-family:'Bebas Neue';font-size:2rem;color:var(--green);">52</div>
+              <div style="font-size:0.72rem;color:var(--muted);">إجمالي المشتركين</div>
+            </div>
+            <div style="background:var(--bg2);border:1px solid rgba(34,197,94,0.2);border-radius:12px;padding:16px;text-align:center;">
+              <div style="font-family:'Bebas Neue';font-size:2rem;color:var(--green);">42</div>
+              <div style="font-size:0.72rem;color:var(--muted);">✅ اشتراك نشط</div>
+            </div>
+            <div style="background:var(--bg2);border:1px solid rgba(234,179,8,0.2);border-radius:12px;padding:16px;text-align:center;">
+              <div style="font-family:'Bebas Neue';font-size:2rem;color:var(--yellow);">7</div>
+              <div style="font-size:0.72rem;color:var(--muted);">⚠️ قارب الانتهاء</div>
+            </div>
+            <div style="background:var(--bg2);border:1px solid rgba(239,68,68,0.2);border-radius:12px;padding:16px;text-align:center;">
+              <div style="font-family:'Bebas Neue';font-size:2rem;color:var(--red);">3</div>
+              <div style="font-size:0.72rem;color:var(--muted);">❌ منتهي</div>
+            </div>
+          </div>
+          <div style="font-size:0.8rem;font-weight:700;margin-bottom:12px;color:var(--muted);">آخر المشتركين</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg2);border-radius:10px;font-size:0.78rem;">
+              <div style="width:32px;height:32px;background:linear-gradient(135deg,var(--orange),var(--orange-dark));border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:0.65rem;font-weight:700;">أح</div>
+              <div style="flex:1;font-weight:600;">أحمد بن علي</div>
+              <div style="color:var(--muted);">ينتهي: 15 يونيو</div>
+              <div style="padding:3px 10px;background:rgba(34,197,94,0.15);color:var(--green);border-radius:100px;font-size:0.65rem;font-weight:700;">نشط</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg2);border-radius:10px;font-size:0.78rem;">
+              <div style="width:32px;height:32px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:0.65rem;font-weight:700;">يو</div>
+              <div style="flex:1;font-weight:600;">يوسف قاسم</div>
+              <div style="color:var(--muted);">ينتهي: 28 مايو</div>
+              <div style="padding:3px 10px;background:rgba(234,179,8,0.15);color:var(--yellow);border-radius:100px;font-size:0.65rem;font-weight:700;">قريباً</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Members -->
+    <div class="showcase-screen" id="screen-members">
+      <div class="mini-screen">
+        <div class="mini-titlebar">
+          <div class="mini-dot r"></div><div class="mini-dot y"></div><div class="mini-dot g"></div>
+          <span style="margin-right:auto;font-size:0.72rem;color:var(--muted);">قائمة المشتركين</span>
+        </div>
+        <div class="mini-content">
+          <div style="display:flex;gap:10px;margin-bottom:16px;">
+            <div style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:0.78rem;color:var(--muted);">🔍 البحث عن مشترك...</div>
+            <button style="background:var(--orange);color:white;border:none;padding:10px 18px;border-radius:10px;font-size:0.78rem;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;">+ إضافة</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg2);border-radius:10px;font-size:0.78rem;">
+              <div style="width:34px;height:34px;background:linear-gradient(135deg,var(--orange),var(--orange-dark));border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:0.65rem;font-weight:700;flex-shrink:0;">أح</div>
+              <div style="flex:1;"><div style="font-weight:700;">أحمد بن علي</div><div style="color:var(--muted);margin-top:2px;">📱 0696 123 456</div></div>
+              <div style="text-align:center"><div style="color:var(--muted);font-size:0.68rem;">ينتهي</div><div style="font-weight:700;">15 يونيو</div></div>
+              <div style="padding:4px 12px;background:rgba(34,197,94,0.15);color:var(--green);border-radius:100px;font-size:0.65rem;font-weight:700;">نشط ✅</div>
+              <button style="background:rgba(37,211,102,0.15);color:#25d366;border:none;padding:6px 10px;border-radius:8px;font-size:0.7rem;cursor:pointer;">💬</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg2);border-radius:10px;font-size:0.78rem;">
+              <div style="width:34px;height:34px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:0.65rem;font-weight:700;flex-shrink:0;">كر</div>
+              <div style="flex:1;"><div style="font-weight:700;">كريم مصطفى</div><div style="color:var(--muted);margin-top:2px;">📱 0561 456 789</div></div>
+              <div style="text-align:center"><div style="color:var(--muted);font-size:0.68rem;">ينتهي</div><div style="font-weight:700;">25 مايو</div></div>
+              <div style="padding:4px 12px;background:rgba(234,179,8,0.15);color:var(--yellow);border-radius:100px;font-size:0.65rem;font-weight:700;">قريب ⚠️</div>
+              <button style="background:rgba(37,211,102,0.15);color:#25d366;border:none;padding:6px 10px;border-radius:8px;font-size:0.7rem;cursor:pointer;">💬</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg2);border-radius:10px;font-size:0.78rem;">
+              <div style="width:34px;height:34px;background:linear-gradient(135deg,#ef4444,#b91c1c);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:0.65rem;font-weight:700;flex-shrink:0;">سع</div>
+              <div style="flex:1;"><div style="font-weight:700;">سعيد بوزيد</div><div style="color:var(--muted);margin-top:2px;">📱 0770 987 654</div></div>
+              <div style="text-align:center"><div style="color:var(--muted);font-size:0.68rem;">انتهى</div><div style="font-weight:700;color:var(--red);">10 مايو</div></div>
+              <div style="padding:4px 12px;background:rgba(239,68,68,0.15);color:var(--red);border-radius:100px;font-size:0.65rem;font-weight:700;">منتهي ❌</div>
+              <button style="background:rgba(37,211,102,0.15);color:#25d366;border:none;padding:6px 10px;border-radius:8px;font-size:0.7rem;cursor:pointer;">💬</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alerts -->
+    <div class="showcase-screen" id="screen-alerts">
+      <div class="mini-screen">
+        <div class="mini-titlebar">
+          <div class="mini-dot r"></div><div class="mini-dot y"></div><div class="mini-dot g"></div>
+          <span style="margin-right:auto;font-size:0.72rem;color:var(--muted);">التنبيهات</span>
+        </div>
+        <div class="mini-content">
+          <div style="margin-bottom:16px;">
+            <div style="font-size:0.78rem;font-weight:700;color:var(--red);margin-bottom:10px;">❌ اشتراكات منتهية (3)</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;font-size:0.78rem;">
+                <div style="font-size:1.2rem;">❌</div>
+                <div style="flex:1;"><div style="font-weight:700;">سعيد بوزيد</div><div style="color:var(--muted);">انتهى منذ 12 يوم</div></div>
+                <button style="background:rgba(37,211,102,0.15);color:#25d366;border:none;padding:7px 12px;border-radius:8px;font-size:0.7rem;cursor:pointer;">💬 واتساب</button>
+                <button style="background:rgba(245,130,31,0.15);color:var(--orange);border:none;padding:7px 12px;border-radius:8px;font-size:0.7rem;cursor:pointer;">🔄 تجديد</button>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:700;color:var(--yellow);margin-bottom:10px;">⚠️ قاربت على الانتهاء (7)</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.2);border-radius:10px;font-size:0.78rem;">
+                <div style="font-size:1.2rem;">⚠️</div>
+                <div style="flex:1;"><div style="font-weight:700;">كريم مصطفى</div><div style="color:var(--muted);">ينتهي خلال 3 أيام</div></div>
+                <button style="background:rgba(37,211,102,0.15);color:#25d366;border:none;padding:7px 12px;border-radius:8px;font-size:0.7rem;cursor:pointer;">💬 واتساب</button>
+                <button style="background:rgba(245,130,31,0.15);color:var(--orange);border:none;padding:7px 12px;border-radius:8px;font-size:0.7rem;cursor:pointer;">🔄 تجديد</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="showcase-screen" id="screen-stats">
+      <div class="mini-screen">
+        <div class="mini-titlebar">
+          <div class="mini-dot r"></div><div class="mini-dot y"></div><div class="mini-dot g"></div>
+          <span style="margin-right:auto;font-size:0.72rem;color:var(--muted);">الإحصائيات</span>
+        </div>
+        <div class="mini-content">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;">
+            <div style="background:linear-gradient(135deg,rgba(245,130,31,0.15),rgba(245,130,31,0.05));border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+              <div style="font-family:'Bebas Neue';font-size:1.6rem;color:var(--orange);">234,000</div>
+              <div style="font-size:0.7rem;color:var(--muted);">💰 دخل الشهر (دج)</div>
+            </div>
+            <div style="background:linear-gradient(135deg,rgba(34,197,94,0.15),rgba(34,197,94,0.05));border:1px solid rgba(34,197,94,0.2);border-radius:12px;padding:16px;text-align:center;">
+              <div style="font-family:'Bebas Neue';font-size:1.6rem;color:var(--green);">52</div>
+              <div style="font-size:0.7rem;color:var(--muted);">👥 إجمالي المشتركين</div>
+            </div>
+            <div style="background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(99,102,241,0.05));border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:16px;text-align:center;">
+              <div style="font-family:'Bebas Neue';font-size:1.6rem;color:#818cf8);">45,000</div>
+              <div style="font-size:0.7rem;color:var(--muted);">💊 مبيعات المكملات</div>
+            </div>
+          </div>
+          <div style="font-size:0.8rem;font-weight:700;margin-bottom:12px;">📈 الدخل آخر 6 أشهر</div>
+          <div style="display:flex;align-items:flex-end;gap:8px;height:80px;">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <div style="background:var(--orange);width:100%;border-radius:4px 4px 0 0;height:45px;opacity:0.7;"></div>
+              <div style="font-size:0.6rem;color:var(--muted);">يناير</div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <div style="background:var(--orange);width:100%;border-radius:4px 4px 0 0;height:55px;opacity:0.8;"></div>
+              <div style="font-size:0.6rem;color:var(--muted);">فبراير</div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <div style="background:var(--orange);width:100%;border-radius:4px 4px 0 0;height:40px;opacity:0.7;"></div>
+              <div style="font-size:0.6rem;color:var(--muted);">مارس</div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <div style="background:var(--orange);width:100%;border-radius:4px 4px 0 0;height:65px;opacity:0.85;"></div>
+              <div style="font-size:0.6rem;color:var(--muted);">أبريل</div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <div style="background:var(--orange);width:100%;border-radius:4px 4px 0 0;height:70px;opacity:0.9;"></div>
+              <div style="font-size:0.6rem;color:var(--muted);">مايو</div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <div style="background:var(--orange);width:100%;border-radius:4px 4px 0 0;height:80px;"></div>
+              <div style="font-size:0.6rem;color:var(--orange);font-weight:700;">يونيو</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Debts -->
+    <div class="showcase-screen" id="screen-debts">
+      <div class="mini-screen">
+        <div class="mini-titlebar">
+          <div class="mini-dot r"></div><div class="mini-dot y"></div><div class="mini-dot g"></div>
+          <span style="margin-right:auto;font-size:0.72rem;color:var(--muted);">الديون</span>
+        </div>
+        <div class="mini-content">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;">
+            <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;">
+              <div style="font-family:'Bebas Neue';font-size:1.5rem;color:var(--red);">5</div>
+              <div style="font-size:0.68rem;color:var(--muted);">إجمالي الديون</div>
+            </div>
+            <div style="background:var(--bg2);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:14px;text-align:center;">
+              <div style="font-family:'Bebas Neue';font-size:1.5rem;color:var(--red);">18,500</div>
+              <div style="font-size:0.68rem;color:var(--muted);">المبلغ الكلي (دج)</div>
+            </div>
+            <div style="background:var(--bg2);border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:14px;text-align:center;">
+              <div style="font-family:'Bebas Neue';font-size:1.5rem;color:var(--green);">3</div>
+              <div style="font-size:0.68rem;color:var(--muted);">سددوا ✅</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:10px;padding:12px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);border-radius:10px;font-size:0.78rem;">
+              <div style="width:32px;height:32px;background:linear-gradient(135deg,var(--orange),var(--orange-dark));border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:0.62rem;font-weight:700;flex-shrink:0;">رض</div>
+              <div style="flex:1;"><div style="font-weight:700;">رضا حمادي</div><div style="color:var(--muted);">منذ 15 يوم</div></div>
+              <div style="font-weight:700;color:var(--red);">3,000 دج</div>
+              <button style="background:rgba(37,211,102,0.15);color:#25d366;border:none;padding:6px 10px;border-radius:8px;font-size:0.65rem;cursor:pointer;">💬</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:12px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.15);border-radius:10px;font-size:0.78rem;">
+              <div style="width:32px;height:32px;background:linear-gradient(135deg,#22c55e,#16a34a);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:0.62rem;font-weight:700;flex-shrink:0;">نب</div>
+              <div style="flex:1;"><div style="font-weight:700;">نبيل عمران</div><div style="color:var(--muted);">سدد ✅</div></div>
+              <div style="font-weight:700;color:var(--green);">2,500 دج</div>
+              <div style="padding:3px 10px;background:rgba(34,197,94,0.15);color:var(--green);border-radius:100px;font-size:0.65rem;font-weight:700;">مسدد</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing-section">
+  <div class="glow-orb" style="width:600px;height:400px;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(245,130,31,0.06);"></div>
+
+  <div class="section-header reveal">
+    <div class="section-tag">💰 السعر</div>
+    <h2 class="section-title">سعر <span>واضح بلا مفاجآت</span></h2>
+    <p class="section-desc">دفعة وحدة — وهو ديالك للأبد</p>
+  </div>
+
+  <div class="pricing-card reveal">
+    <div class="pricing-badge">🔥 العرض الأفضل</div>
+    <div class="pricing-name">GYM MANAGER — النسخة الكاملة</div>
+    <div class="pricing-price">
+      <span class="pricing-currency"></span>4,500<span class="pricing-currency"> دج</span>
+    </div>
+    <div class="pricing-period">دفعة واحدة — بدون اشتراك شهري</div>
+    <ul class="pricing-features">
+      <li>إدارة مشتركين بلا حد</li>
+      <li>نظام تنبيهات تلقائي</li>
+      <li>إرسال واتساب بضغطة وحدة</li>
+      <li>تتبع المكملات الغذائية</li>
+      <li>إحصائيات كاملة</li>
+      <li>إدارة الديون</li>
+      <li>نسخة احتياطية وتصدير البيانات</li>
+      <li>يشتغل بلا إنترنت ✅</li>
+      <li>تحديثات مجانية</li>
+      <li>دعم فني عبر واتساب</li>
+    </ul>
+    <a href="https://wa.me/213696593033?text=السلام عليكم، أريد شراء برنامج Gym Manager بـ 4500 دج" target="_blank" class="pricing-btn">
+      💬 اطلب الآن عبر واتساب
+    </a>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-content reveal">
+    <div class="section-tag">📞 تواصل معنا</div>
+    <h2 class="section-title" style="margin-top:16px;">جاهز تبدأ <span>تسيّر صالتك</span> باحترافية؟</h2>
+    <p style="color:var(--muted);margin-top:12px;font-size:1rem;">راسلنا على واتساب — نردوا عليك في أقرب وقت</p>
+
+    <a href="https://wa.me/213696593033?text=السلام عليكم، أريد الاستفسار عن برنامج Gym Manager" target="_blank" class="wa-btn">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      راسلنا على واتساب
+    </a>
+
+
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">
+    <div style="width:30px;height:30px;background:linear-gradient(135deg,var(--orange),var(--orange-dark));border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue';font-size:18px;color:white;">G</div>
+    GYM <span>MANAGER</span>
+  </div>
+  <div class="footer-copy">© 2025 Gym Manager — جميع الحقوق محفوظة 🇩🇿</div>
+</footer>
+
+<!-- FLOATING WA -->
+<a href="https://wa.me/213696593033?text=السلام عليكم، أريد الاستفسار عن برنامج Gym Manager" target="_blank" class="floating-wa">
+  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+</a>
+
+<script>
+  // ─── SHOWCASE TABS ─────────────────────────────────────────
+  function showScreen(id) {
+    document.querySelectorAll('.showcase-screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.showcase-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('screen-' + id).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  // ─── SCROLL REVEAL ─────────────────────────────────────────
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => {
+          entry.target.classList.add('visible');
+        }, entry.target.dataset.delay || 0);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.reveal').forEach((el, i) => {
+    el.dataset.delay = (i % 4) * 80;
+    observer.observe(el);
+  });
+
+  // ─── SMOOTH SCROLL ─────────────────────────────────────────
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  // ─── NAV ACTIVE ON SCROLL ──────────────────────────────────
+  window.addEventListener('scroll', () => {
+    const nav = document.querySelector('nav');
+    if (window.scrollY > 50) {
+      nav.style.background = 'rgba(8,8,16,0.97)';
+    } else {
+      nav.style.background = 'rgba(8,8,16,0.85)';
+    }
+  });
+</script>
+</body>
+</html>
